@@ -10,7 +10,7 @@ from selenium.webdriver.common.keys import Keys
 
 class FbWebScraper():
 
-    def __init__(self,my_email,my_password,my_profile_url,statuses=50,scroll_time=7,webdriver='Chrome'):
+    def __init__(self,my_email,my_password,my_profile_url,statuses=50,wait_time=5,scroll_time=7,webdriver='Chrome'):
         
         # set account manually (temporary) 
         self.my_email = my_email
@@ -20,6 +20,9 @@ class FbWebScraper():
         
         # set arbitrary scroll time for scraping 
         self.scroll_time = scroll_time
+
+        # set arbitrary wait time for scraping 
+        self.wait_time = wait_time
 
         # initialize connection with mongodb
         self.mongo_connection = pymongo.MongoClient()
@@ -41,7 +44,7 @@ class FbWebScraper():
         # Chrome
         if webdriver == 'Chrome':
             options = ChromeOptions()
-            options.add_argument('--disable-notification')
+            options.add_argument('--disable-notifications')
             self.webdriver = Chrome('chromedriver/chromedriver',options=options)
 
         # Firefox
@@ -53,13 +56,13 @@ class FbWebScraper():
     def fb_login(self):
         
         # initialize webdriver
-        self.webdriver.get('https://m.facebook.com')
+        self.webdriver.get('https://www.facebook.com')
         
         # find email input box 
-        email = self.webdriver.find_element_by_id('m_login_email')
+        email = self.webdriver.find_element_by_id('email')
         
         # find password input box
-        password = self.webdriver.find_element_by_name('pass')
+        password = self.webdriver.find_element_by_id('pass')
         
         # send keys to each element accordingly
         email.send_keys(self.my_email)
@@ -69,14 +72,9 @@ class FbWebScraper():
         password.send_keys(Keys.RETURN) 
         
         # wait the page to load 
-        time.sleep(self.scroll_time)
+        time.sleep(self.wait_time)
 
-        # press the ok button on confirmation page
-        submit_button = self.webdriver.find_element_by_xpath("//button[@type='submit']")
-        self.webdriver.execute_script("arguments[0].click();",submit_button)
         
-        #self.webdriver.close()
-
     def set_friends_dict(self):
         m_facebook = 'https://m.facebook.com'
         facebook = 'https://www.facebook.com'
@@ -85,8 +83,11 @@ class FbWebScraper():
         elif self.my_profile_url.startswith(facebook):
             profile_name = re.sub("^"+facebook,"",self.my_profile_url)
         self.webdriver.find_element_by_css_selector(f'a[href*="{profile_name}"]').click()
+        time.sleep(self.wait_time)
+        self.webdriver.find_element_by_css_selector('a[data-tab-key="friends"]').click()
+        time.sleep(self.wait_time)
+        self.number_of_friends = int(self.webdriver.find_element_by_name('All friends').find_element_by_xpath('span[2]').text)
         
-
 if __name__ == '__main__':
     with open('fb_login_credential.yaml','r') as stream:
         try:
